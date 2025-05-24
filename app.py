@@ -81,6 +81,14 @@ def download_transcript(filename):
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 404
+        
+@app.route('/transcripts', methods=['GET'])
+def list_transcripts():
+    files = []
+    for filename in os.listdir(TRANSCRIPTS_FOLDER):
+        if filename.endswith('.txt'):
+            files.append(filename)
+    return jsonify(files)
 
 if __name__ == '__main__':
     app.run(debug=True) 

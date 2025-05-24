@@ -9,67 +9,78 @@
 <body>
     <div class="container">
         <h1>Audio Transcription Service</h1>
-        
-        <form id="uploadForm" enctype="multipart/form-data">
-            <div class="form-group">
+
+        <div class="upload-box">
+            <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
                 <label for="file">Select WAV Audio File:</label>
                 <input type="file" id="file" name="file" accept=".wav" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="language">Select Language:</label>
+                <label for="language">Language:</label>
                 <select id="language" name="language" required>
-                        <option value="unknown">Auto-detect (Saarika v2 only)</option>
-                        <option value="en-IN">English</option>
-                        <option value="hi-IN">Hindi</option>
-                        <option value="mr-IN">Marathi</option>
-                        <option value="ta-IN">Tamil</option>
-                        <option value="te-IN">Telugu</option>
-                        <option value="kn-IN">Kannada</option>
-                        <option value="ml-IN">Malayalam</option>
-                        <option value="gu-IN">Gujarati</option>
-                        <option value="pa-IN">Punjabi</option>
-                        <option value="bn-IN">Bengali</option>
-                    </select>
-                    
+                    <option value="unknown">Auto-detect</option>
+                    <option value="en-IN">English</option>
+                    <option value="hi-IN">Hindi</option>
+                    <option value="mr-IN">Marathi</option>
+                    <option value="ta-IN">Tamil</option>
+                    <option value="te-IN">Telugu</option>
+                    <option value="kn-IN">Kannada</option>
+                    <option value="ml-IN">Malayalam</option>
+                    <option value="gu-IN">Gujarati</option>
+                    <option value="pa-IN">Punjabi</option>
+                    <option value="bn-IN">Bengali</option>
+                </select>
+                <button type="submit">Upload and Transcribe</button>
+            </form>
+            <div id="status" class="hidden"></div>
+            <div id="downloadSection" class="hidden">
+                <a id="downloadLink" href="#" class="download-button">Download Transcript</a>
             </div>
-            
-            <button type="submit">Upload and Transcribe</button>
-        </form>
-        
-        <div id="status" class="hidden"></div>
-        <div id="downloadSection" class="hidden">
-            <a id="downloadLink" href="#" class="download-button">Download Transcript</a>
+        </div>
+
+        <div class="transcripts-section">
+            <div class="transcripts-title">Previously transcribed files</div>
+            <div class="transcripts-grid" id="transcriptsGrid">
+                <!-- Cards will load here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup modal -->
+    <div id="popupModal">
+        <div class="popup-content">
+            <button class="close" onclick="closePopup()">×</button>
+            <h3>Transcript</h3>
+            <pre id="popupText"></pre>
         </div>
     </div>
 
     <script>
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const status = document.getElementById('status');
             const downloadSection = document.getElementById('downloadSection');
             const downloadLink = document.getElementById('downloadLink');
-            
+
             status.textContent = 'Processing...';
             status.className = 'status processing';
             downloadSection.className = 'hidden';
-            
+
             const formData = new FormData(e.target);
-            
+
             try {
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     status.textContent = 'File processed successfully!';
                     status.className = 'status success';
                     downloadLink.href = `/download/${data.transcript_filename}`;
                     downloadSection.className = '';
+                    loadTranscripts();
                 } else {
                     status.textContent = `Error: ${data.error}`;
                     status.className = 'status error';
@@ -79,6 +90,60 @@
                 status.className = 'status error';
             }
         });
+
+        async function loadTranscripts() {
+            const grid = document.getElementById('transcriptsGrid');
+            grid.innerHTML = '';
+            const files = await fetch('/transcripts').then(res => res.json());
+            if (!files.length) {
+                grid.innerHTML = "<div style='color:#888; text-align:center;'>No transcripts yet.</div>";
+                return;
+            }
+            for (const filename of files) {
+                // Get a preview of the transcript (first 160 chars)
+                let preview = '';
+                try {
+                    const resp = await fetch(`/download/${filename}`);
+                    const text = await resp.text();
+                    preview = text.length > 160 ? text.slice(0, 160) + '…' : text;
+                } catch {
+                    preview = '[Could not load preview]';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'transcript-card';
+                card.innerHTML = `
+                    <div class="filename">${filename}</div>
+                    <div class="text-preview">${preview}</div>
+                    <div class="actions">
+                        <button onclick="openPopup('${filename}')">Open (popup)</button>
+                        <button onclick="copyTranscript('${filename}')">Copy</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        window.onload = loadTranscripts;
+
+        // Popup handling
+        async function openPopup(filename) {
+            const resp = await fetch(`/download/${filename}`);
+            const text = await resp.text();
+            document.getElementById('popupText').innerText = text;
+            document.getElementById('popupModal').style.display = 'flex';
+        }
+        function closePopup() {
+            document.getElementById('popupModal').style.display = 'none';
+            document.getElementById('popupText').innerText = '';
+        }
+        // Copy to clipboard
+        async function copyTranscript(filename) {
+            const resp = await fetch(`/download/${filename}`);
+            const text = await resp.text();
+            await navigator.clipboard.writeText(text);
+            alert("Transcript copied!");
+        }
     </script>
 </body>
-</html> 
+</html>
