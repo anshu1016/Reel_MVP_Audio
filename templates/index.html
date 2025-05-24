@@ -100,24 +100,38 @@
                 return;
             }
             for (const filename of files) {
-                // Get a preview of the transcript (first 160 chars)
+                // Get a preview of the transcript (first 120 chars)
                 let preview = '';
                 try {
                     const resp = await fetch(`/download/${filename}`);
                     const text = await resp.text();
-                    preview = text.length > 160 ? text.slice(0, 160) + '…' : text;
+                    preview = text.length > 120 ? text.slice(0, 120) + '…' : text;
                 } catch {
                     preview = '[Could not load preview]';
                 }
-
+                // Extract date/time from filename (e.g. 20250524_155722)
+                let time = '';
+                const match = filename.match(/^(\d{8})_(\d{6})/);
+                if (match) {
+                    const y = match[1].slice(0,4), m = match[1].slice(4,6), d = match[1].slice(6,8);
+                    const hh = match[2].slice(0,2), mm = match[2].slice(2,4);
+                    time = `${d}/${m}/${y} (${hh}:${mm})`;
+                }
                 const card = document.createElement('div');
-                card.className = 'transcript-card';
+                card.className = 'transcript-card-v2';
                 card.innerHTML = `
-                    <div class="filename">${filename}</div>
+                    <div class="card-header">
+                        <img class="avatar" src="/static/img/avatar.png" alt="Avatar" />
+                        <div class="meta">
+                            <div class="filename">${filename.replace(/\.txt$/, "")}</div>
+                            <div class="timestamp">${time}</div>
+                        </div>
+                        <button class="menu-btn" title="More options">⋮</button>
+                    </div>
                     <div class="text-preview">${preview}</div>
                     <div class="actions">
-                        <button onclick="openPopup('${filename}')">Open (popup)</button>
-                        <button onclick="copyTranscript('${filename}')">Copy</button>
+                        <button class="btn open-btn" onclick="openPopup('${filename}')">Open</button>
+                        <button class="btn copy-btn" onclick="copyTranscript('${filename}')">Copy</button>
                     </div>
                 `;
                 grid.appendChild(card);
