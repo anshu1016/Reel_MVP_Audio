@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-
+print("Pushing to github    ")
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 TRANSCRIPTS_FOLDER = 'transcripts'

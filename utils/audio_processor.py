@@ -26,50 +26,36 @@ def split_audio(audio_path):
 def transcribe_chunk(chunk_path, language):
     """Transcribe a single audio chunk using Sarvam AI API."""
     headers = {
-        'api-subscription-key': SARVAM_API_KEY,
-        'Content-Type': 'multipart/form-data'
+        'api-subscription-key': SARVAM_API_KEY
+        # Do NOT set Content-Type!
     }
 
     try:
         with open(chunk_path, 'rb') as audio_file:
-            # Note: API expects 'file' not 'audio_file'
             files = {
                 'file': ('audio.wav', audio_file, 'audio/wav')
             }
-            
-            # Optional parameters
             data = {}
             if language != 'unknown':
                 data['language_code'] = language
-            data['model'] = 'saarika:v2'  # Optional, this is default anyway
+            data['model'] = 'saarika:v2'
 
-            print("=== Debug Information ===")
-            print(f"API Endpoint: {SARVAM_API_ENDPOINT}")
-            print(f"Headers: {headers}")
-            print(f"Data parameters: {data}")
-            print(f"File being sent: {chunk_path}")
-            
             response = requests.post(
                 SARVAM_API_ENDPOINT,
                 headers=headers,
                 files=files,
                 data=data
             )
-
-            print(f"Response Status Code: {response.status_code}")
-            print(f"Response Content: {response.text}")
-            print("=====================")
-
             if response.status_code != 200:
                 error_detail = f"API request failed: {response.text}"
                 raise Exception(error_detail)
 
-            # API returns 'transcript' field in response
             return response.json().get('transcript', '')
 
     except Exception as e:
         print(f"Exception occurred: {str(e)}")
         raise
+
 
 def process_audio_file(audio_path, language):
     """Process audio file and return complete transcript."""
