@@ -36,7 +36,10 @@ def upload_file():
         
         file = request.files['file']
         language = request.form.get('language', 'en-IN')
+
+        record_id = request.form.get('record_id')
         
+
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
             
@@ -65,8 +68,9 @@ def upload_file():
         return jsonify({
             'success': True,
             'message': 'File processed successfully',
-            'transcript_filename': transcript_filename
-        })
+            'transcript_filename': transcript_filename,
+            'record_id': record_id
+            })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -74,14 +78,25 @@ def upload_file():
 @app.route('/download/<filename>')
 def download_transcript(filename):
     try:
-        return send_file(
-            os.path.join(TRANSCRIPTS_FOLDER, filename),
-            as_attachment=True,
-            download_name=filename
-        )
+        record_id = request.args.get('record_id')  # Get from query string
+        transcript_path = os.path.join(TRANSCRIPTS_FOLDER, filename)
+
+        if not os.path.exists(transcript_path):
+            return jsonify({'error': 'Transcript file not found'}), 404
+
+        with open(transcript_path, 'r', encoding='utf-8') as f:
+            transcript = f.read()
+
+        return jsonify({
+            "data": transcript,
+            "record_id": record_id,
+            "filename": filename
+        })
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 404
-        
+        return jsonify({'error': str(e)}), 500
+
+    
 @app.route('/transcripts', methods=['GET'])
 def list_transcripts():
     files = []
